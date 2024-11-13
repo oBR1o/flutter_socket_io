@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:test_chat_with_socket/services/notification_service.dart';
 import 'package:test_chat_with_socket/widget/home_page.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  
+  NotificationService notificationService = NotificationService();
+  await notificationService.init();
   runApp(const MainApp());
 }
 
