@@ -3,7 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+  static final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
@@ -17,7 +17,7 @@ class NotificationService {
 
     // กำหนดการจัดการข้อความเมื่ออยู่ใน Foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _showNotification(message.notification?.title, message.notification?.body);
+      showNotification(message.notification?.title, message.notification?.body);
     });
 
     // กำหนดการจัดการข้อความเมื่อแอปอยู่ใน Background แล้วถูกเปิดขึ้น
@@ -33,7 +33,7 @@ class NotificationService {
   }
 
   // ฟังก์ชันแสดงการแจ้งเตือนแบบ Local
-  Future<void> _showNotification(String? title, String? body) async {
+  Future<void> showNotification(String? title, String? body) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'chat_channel_id',  // ระบุ channel ID สำหรับ Android

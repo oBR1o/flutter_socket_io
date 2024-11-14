@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:logger/logger.dart';
-import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import 'package:grouped_list/grouped_list.dart';
 import 'package:test_chat_with_socket/model/message.dart';
+import 'package:test_chat_with_socket/services/socket_service.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -13,56 +12,27 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  socket_io.Socket? socket;
-
+  late SocketService socketService;
   final TextEditingController _textController = TextEditingController();
   List<Message> messages = [];
 
   @override
   void initState() {
     super.initState();
-
-    socket = socket_io.io(
-      'http://192.168.1.177:3000',
-      socket_io.OptionBuilder()
-          .setTransports(['websocket'])
-          .enableAutoConnect()
-          .enableForceNew()
-          .build(),
-    );
-
-    setupListteners();
+    socketService = SocketService(onMessageReceived: _handleNewMessage);
   }
 
   @override
   void dispose() {
-    socket?.close();
+    socketService.dispose();
     super.dispose();
   }
 
-  void setupListteners() {
-    socket?.on('connect', (_) {
-      Logger().i('Connected');
-      print('Socket Connected'); // Additional debug print
+  void _handleNewMessage(Message message) {
+    setState(() {
+      messages.add(message);
+      messages.sort((a, b) => b.date.compareTo(a.date)); // Sort by date descending
     });
-
-    socket?.on('disconnect', (_) {
-      Logger().e('Disconnected');
-      print('Socket Disconnected'); // Additional debug print
-    });
-
-    socket?.on('connect_error', (data) {
-      Logger().e('Connect Error: $data');
-      print('Socket Connection Error: $data'); // Additional debug print
-    });
-
-    // socket?.on(
-    //   'message',
-    //   (data) =>
-    //       setState(() => messages = [Message.fromJson(data), ...messages]),
-    // );
-
-    socket?.on('broadcastMessage', (data) => reciveMessage(data));
   }
 
   void sendMessage() {
@@ -72,15 +42,7 @@ class _ChatPageState extends State<ChatPage> {
       date: DateTime.now(),
       isSentbyMe: true,
     );
-
-    final messageData = {
-      'text': message.text,
-      // 'date': message.date.toIso8601String(),
-      // 'isSentbyMe': message.isSentbyMe,
-    };
-
-    print('Sending message data: $messageData');
-    socket?.emit('sendMessage', messageData);
+    socketService.sendMessage(_textController.text);
 
     setState(() {
       messages.add(message);
@@ -88,46 +50,6 @@ class _ChatPageState extends State<ChatPage> {
     });
     _textController.clear();
   }
-}
-
-void reciveMessage(dynamic data) {
-  print('Received message data: $data');
-
-  String messageText;
-  if (data is String) {
-    if (data.contains('Server received your message: ')) {
-      messageText = data.replaceAll('Server received your message: ', '');
-    } else if (data.contains('New message from Mobile: ')) {
-      messageText = data.replaceAll('New message from Mobile: ', '');
-    } else if (data.contains('New message from Website: ')) {
-      messageText = data.replaceAll('New message from Website: ', '');
-    }else {
-      messageText = data;
-    }
-  } else if (data is Map) {
-    messageText = data['text'] ?? '';
-  } else {
-    messageText = data.toString();
-  }
-
-  // if (data is Map) {
-  //   // Handle object format
-  //   messageText = data['text'] ?? 'Empty message';
-  // } else {
-  //   // Handle string format
-  //   messageText = data.toString();
-  // }
-
-  final receivedMessage = Message(
-    text: messageText,
-    date: DateTime.now(),
-    isSentbyMe: false,
-  );
-
-  setState(() {
-    messages = [receivedMessage, ...messages];
-    messages.sort((a, b) => b.date.compareTo(a.date));
-  });
 }
 
   @override
